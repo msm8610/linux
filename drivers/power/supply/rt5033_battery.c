@@ -1,13 +1,15 @@
-// SPDX-License-Identifier: GPL-2.0-only
 /*
  * Fuel gauge driver for Richtek RT5033
  *
  * Copyright (C) 2014 Samsung Electronics, Co., Ltd.
- * Author: Beomho Seo <beomho.seo@samsung.com>
+ * Beomho Seo <beomho.seo@samsung.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published bythe Free Software Foundation.
  */
 
 #include <linux/module.h>
-#include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/power_supply.h>
 #include <linux/mfd/rt5033-private.h>
@@ -70,7 +72,8 @@ static int rt5033_battery_get_property(struct power_supply *psy,
 		enum power_supply_property psp,
 		union power_supply_propval *val)
 {
-	struct rt5033_battery *battery = power_supply_get_drvdata(psy);
+	struct rt5033_battery *battery = container_of(psy,
+				struct rt5033_battery, psy);
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
@@ -99,25 +102,16 @@ static enum power_supply_property rt5033_battery_props[] = {
 	POWER_SUPPLY_PROP_CAPACITY,
 };
 
-static const struct regmap_config rt5033_battery_regmap_config = {
+static struct regmap_config rt5033_battery_regmap_config = {
 	.reg_bits	= 8,
 	.val_bits	= 8,
 	.max_register	= RT5033_FUEL_REG_END,
 };
 
-static const struct power_supply_desc rt5033_battery_desc = {
-	.name		= "rt5033-battery",
-	.type		= POWER_SUPPLY_TYPE_BATTERY,
-	.get_property	= rt5033_battery_get_property,
-	.properties	= rt5033_battery_props,
-	.num_properties	= ARRAY_SIZE(rt5033_battery_props),
-};
-
 static int rt5033_battery_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
-	struct i2c_adapter *adapter = client->adapter;
-	struct power_supply_config psy_cfg = {};
+	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
 	struct rt5033_battery *battery;
 	u32 ret;
 
@@ -126,7 +120,7 @@ static int rt5033_battery_probe(struct i2c_client *client,
 
 	battery = devm_kzalloc(&client->dev, sizeof(*battery), GFP_KERNEL);
 	if (!battery)
-		return -ENOMEM;
+		return -EINVAL;
 
 	battery->client = client;
 	battery->regmap = devm_regmap_init_i2c(client,
@@ -137,13 +131,16 @@ static int rt5033_battery_probe(struct i2c_client *client,
 	}
 
 	i2c_set_clientdata(client, battery);
-	psy_cfg.drv_data = battery;
 
-	battery->psy = power_supply_register(&client->dev,
-					     &rt5033_battery_desc, &psy_cfg);
-	if (IS_ERR(battery->psy)) {
+	battery->psy.name		= "rt5033-battery";
+	battery->psy.type		= POWER_SUPPLY_TYPE_BATTERY;
+	battery->psy.get_property	= rt5033_battery_get_property;
+	battery->psy.properties		= rt5033_battery_props;
+	battery->psy.num_properties	= ARRAY_SIZE(rt5033_battery_props);
+
+	ret = power_supply_register(&client->dev, &battery->psy);
+	if (ret) {
 		dev_err(&client->dev, "Failed to register power supply\n");
-		ret = PTR_ERR(battery->psy);
 		return ret;
 	}
 
@@ -154,7 +151,7 @@ static int rt5033_battery_remove(struct i2c_client *client)
 {
 	struct rt5033_battery *battery = i2c_get_clientdata(client);
 
-	power_supply_unregister(battery->psy);
+	power_supply_unregister(&battery->psy);
 
 	return 0;
 }
@@ -163,18 +160,11 @@ static const struct i2c_device_id rt5033_battery_id[] = {
 	{ "rt5033-battery", },
 	{ }
 };
-MODULE_DEVICE_TABLE(i2c, rt5033_battery_id);
-
-static const struct of_device_id rt5033_battery_dt_match[] = {
-	{ .compatible = "richtek,rt5033-battery", },
-	{ }
-};
-MODULE_DEVICE_TABLE(of, rt5033_battery_dt_match);
+MODULE_DEVICE_TABLE(platform, rt5033_battery_id);
 
 static struct i2c_driver rt5033_battery_driver = {
 	.driver = {
 		.name = "rt5033-battery",
-		.of_match_table = of_match_ptr(rt5033_battery_dt_match),
 	},
 	.probe = rt5033_battery_probe,
 	.remove = rt5033_battery_remove,
