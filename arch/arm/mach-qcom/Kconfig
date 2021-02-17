@@ -46,3 +46,11 @@ menuconfig SEC_FORTUNA_PROJECT
 	help
 	  Support for Samsung Fortuna Project
 
+menuconfig MACH_FORTUNA3G_LTN_DTV
+	depends on SEC_FORTUNA_PROJECT
+	default n
+	bool "Samsung FORTUNA 3G Latin America DTV"
+	help
+	  Support for Samsung FORTUNA 3G Latin America DTV device.
+
+
