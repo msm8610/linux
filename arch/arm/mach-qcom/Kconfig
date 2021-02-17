@@ -38,3 +38,11 @@ config ARCH_MDM9615
 	select CLKSRC_QCOM
 
 endif
+
+menuconfig SEC_FORTUNA_PROJECT
+	depends on ARCH_MSM8916
+	default n
+	bool "Samsung FORTUNA Project"
+	help
+	  Support for Samsung Fortuna Project
+
