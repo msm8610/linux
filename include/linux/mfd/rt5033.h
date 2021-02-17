@@ -9,10 +9,11 @@
 #ifndef __RT5033_H__
 #define __RT5033_H__
 
-#include <linux/regulator/consumer.h>
+#include <linux/led-class-flash.h>
 #include <linux/i2c.h>
-#include <linux/regmap.h>
 #include <linux/power_supply.h>
+#include <linux/regmap.h>
+#include <linux/regulator/consumer.h>
 
 /* RT5033 regulator IDs */
 enum rt5033_regulators {
@@ -54,6 +55,28 @@ struct rt5033_charger {
 	struct power_supply	psy;
 
 	struct rt5033_charger_data	*chg;
+};
+
+/* RT5033 led platform data */
+
+struct rt5033_led_config_data {
+	/* maximum LED current in movie mode */
+	u32 torch_max_microamp;
+	/* maximum LED current in flash mode */
+	u32 flash_max_microamp;
+	/* maximum flash timeout */
+	u32 flash_max_timeout;
+	/* max LED brightness level */
+	enum led_brightness max_brightness;
+};
+
+struct rt5033_led {
+	struct device		*dev;
+	struct rt5033_dev	*rt5033;
+	struct regmap		*regmap;
+
+	/* Related LED class device */
+	struct led_classdev	cdev;
 };
 
 #endif /* __RT5033_H__ */
