@@ -28,6 +28,13 @@ if HWMON
 config HWMON_VID
 	tristate
 
+config SENSORS_GP2AP002
+	tristate "GP2AP002 series Proximity/Ambient Sensor"
+	depends on HWMON && I2C
+	help
+	  This driver provides support for Proximity/Ambient Sensor.
+
+
 config HWMON_DEBUG_CHIP
 	bool "Hardware Monitoring Chip debugging messages"
 	help
